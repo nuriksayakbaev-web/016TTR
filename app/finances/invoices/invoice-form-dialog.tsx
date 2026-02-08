@@ -50,7 +50,7 @@ export function InvoiceFormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   invoice: Invoice | null;
-  onSuccess: () => void;
+  onSuccess: (newInvoice?: Invoice | null) => void;
 }) {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
@@ -109,8 +109,11 @@ export function InvoiceFormDialog({
           console.error("[016TTR] Invoice save error:", msg);
           return;
         }
+        setSaving(false);
+        onOpenChange(false);
+        onSuccess();
       } else {
-        const { error } = await insertRow(supabase, "invoices", payload);
+        const { data: inserted, error } = await insertRow(supabase, "invoices", payload);
         if (error) {
           const msg = error.message;
           setFormError(msg);
@@ -119,10 +122,10 @@ export function InvoiceFormDialog({
           console.error("[016TTR] Invoice save error:", msg);
           return;
         }
+        setSaving(false);
+        onOpenChange(false);
+        onSuccess((inserted ?? null) as Invoice | null);
       }
-      setSaving(false);
-      onOpenChange(false);
-      onSuccess();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setFormError(msg);

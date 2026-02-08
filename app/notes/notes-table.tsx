@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Note } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,12 +29,21 @@ import { Pencil, Trash2, Plus, StickyNote } from "lucide-react";
 
 export function NotesTable({ notes }: { notes: Note[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const [list, setList] = useState<Note[]>(notes);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Note | null>(null);
   const [form, setForm] = useState({ content: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
+
+  useEffect(() => setList(notes), [notes]);
+
+  function refresh() {
+    router.refresh();
+    router.replace(pathname);
+  }
 
   function openCreate() {
     setFormError(null);
@@ -66,17 +75,20 @@ export function NotesTable({ notes }: { notes: Note[] }) {
         return;
       }
       toast.success("Заметка обновлена");
+      setOpen(false);
+      refresh();
     } else {
-      const { error } = await insertRow(supabase, "notes", payload);
+      const { data: inserted, error } = await insertRow(supabase, "notes", payload);
       if (error) {
         setFormError(error.message);
         toast.error(error.message);
         return;
       }
+      setOpen(false);
+      const row = (inserted ?? null) as Note | null;
+      if (row) setList((prev) => [row, ...prev]);
       toast.success("Заметка добавлена");
     }
-    setOpen(false);
-    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -88,7 +100,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
       return;
     }
     toast.success("Заметка удалена");
-    router.refresh();
+    setList((prev) => prev.filter((n) => n.id !== id));
   }
 
   return (
@@ -109,14 +121,14 @@ export function NotesTable({ notes }: { notes: Note[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {notes.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="p-0">
                   <EmptyState icon={StickyNote} title="Нет заметок" action={<Button onClick={openCreate}>Добавить</Button>} />
                 </TableCell>
               </TableRow>
             ) : (
-              notes.map((n) => (
+              list.map((n) => (
                 <TableRow key={n.id}>
                   <TableCell className="max-w-md truncate font-medium">{n.content}</TableCell>
                   <TableCell className="text-muted-foreground text-sm">

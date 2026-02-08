@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { InvoiceTemplate } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +43,9 @@ const periodLabel: Record<string, string> = {
 
 export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const [list, setList] = useState<InvoiceTemplate[]>(templates);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InvoiceTemplate | null>(null);
   const [form, setForm] = useState({
@@ -53,6 +55,13 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
     day_of_month: 1,
   });
   const supabase = createClient();
+
+  useEffect(() => setList(templates), [templates]);
+
+  function refresh() {
+    router.refresh();
+    router.replace(pathname);
+  }
 
   function openCreate() {
     setEditing(null);
@@ -95,16 +104,19 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
         return;
       }
       toast.success("Шаблон обновлён");
+      setOpen(false);
+      refresh();
     } else {
-      const { error } = await insertRow(supabase, "invoice_templates", payload);
+      const { data: inserted, error } = await insertRow(supabase, "invoice_templates", payload);
       if (error) {
         toast.error(error.message);
         return;
       }
+      setOpen(false);
+      const row = (inserted ?? null) as InvoiceTemplate | null;
+      if (row) setList((prev) => [row, ...prev]);
       toast.success("Шаблон создан");
     }
-    setOpen(false);
-    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -116,7 +128,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
       return;
     }
     toast.success("Шаблон удалён");
-    router.refresh();
+    setList((prev) => prev.filter((t) => t.id !== id));
   }
 
   return (
@@ -138,7 +150,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {templates.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="p-0">
                   <EmptyState
@@ -150,7 +162,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
                 </TableCell>
               </TableRow>
             ) : (
-              templates.map((t) => (
+              list.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.client_name}</TableCell>
                   <TableCell className="text-right">

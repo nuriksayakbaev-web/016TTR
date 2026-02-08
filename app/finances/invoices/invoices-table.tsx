@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Invoice } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -77,11 +77,26 @@ export function InvoicesTable({
   const [open, setOpen] = useState(false);
   const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [list, setList] = useState<Invoice[]>(invoices);
   const supabase = createClient();
+
+  useEffect(() => {
+    setList(invoices);
+  }, [invoices]);
 
   function refresh() {
     router.refresh();
     router.replace(pathname);
+  }
+
+  function handleSaveSuccess(newInvoice?: Invoice | null) {
+    if (newInvoice) {
+      setList((prev) => [newInvoice, ...prev]);
+      toast.success("Счёт создан");
+    } else {
+      refresh();
+      toast.success("Счёт обновлён");
+    }
   }
 
   async function handleDelete(id: string) {
@@ -110,7 +125,7 @@ export function InvoicesTable({
   }
 
   function handleExportCurrent() {
-    const rows = invoices.map((i) => ({
+    const rows = list.map((i) => ({
       ...i,
       status: statusLabel[i.status] ?? i.status,
     }));
@@ -169,7 +184,7 @@ export function InvoicesTable({
           variant="outline"
           size="sm"
           onClick={handleExportCurrent}
-          disabled={invoices.length === 0}
+          disabled={list.length === 0}
         >
           <FileDown className="mr-2 h-4 w-4" />
           Экспорт страницы
@@ -205,7 +220,7 @@ export function InvoicesTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invoices.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="p-0">
                   <EmptyState
@@ -225,7 +240,7 @@ export function InvoicesTable({
                 </TableCell>
               </TableRow>
             ) : (
-              invoices.map((inv) => (
+              list.map((inv) => (
                 <TableRow key={inv.id}>
                   <TableCell className="font-medium">{inv.invoice_number}</TableCell>
                   <TableCell>{inv.client_name}</TableCell>
@@ -339,10 +354,7 @@ export function InvoicesTable({
         open={open}
         onOpenChange={setOpen}
         invoice={editing}
-        onSuccess={() => {
-          toast.success(editing ? "Счёт обновлён" : "Счёт создан");
-          refresh();
-        }}
+        onSuccess={handleSaveSuccess}
       />
     </div>
   );

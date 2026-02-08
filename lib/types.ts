@@ -35,6 +35,7 @@ export interface Transaction {
 
 export interface Salary {
   id: string;
+  fio: string | null;
   month: string;
   base: number;
   bonus: number;

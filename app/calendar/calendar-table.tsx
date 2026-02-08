@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { CalendarEvent } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +43,9 @@ const relatedLabel: Record<string, string> = {
 
 export function CalendarTable({ events }: { events: CalendarEvent[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const [list, setList] = useState<CalendarEvent[]>(events);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [form, setForm] = useState({
@@ -53,6 +55,13 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
     related_id: "",
   });
   const supabase = createClient();
+
+  useEffect(() => setList(events), [events]);
+
+  function refresh() {
+    router.refresh();
+    router.replace(pathname);
+  }
 
   function openCreate() {
     setEditing(null);
@@ -95,16 +104,19 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
         return;
       }
       toast.success("Событие обновлено");
+      setOpen(false);
+      refresh();
     } else {
-      const { error } = await insertRow(supabase, "calendar_events", payload);
+      const { data: inserted, error } = await insertRow(supabase, "calendar_events", payload);
       if (error) {
         toast.error(error.message);
         return;
       }
+      setOpen(false);
+      const row = (inserted ?? null) as CalendarEvent | null;
+      if (row) setList((prev) => [row, ...prev]);
       toast.success("Событие добавлено");
     }
-    setOpen(false);
-    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -116,7 +128,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
       return;
     }
     toast.success("Событие удалено");
-    router.refresh();
+    setList((prev) => prev.filter((e) => e.id !== id));
   }
 
   return (
@@ -138,14 +150,14 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="p-0">
                   <EmptyState icon={Calendar} title="Нет событий" action={<Button onClick={openCreate}>Добавить</Button>} />
                 </TableCell>
               </TableRow>
             ) : (
-              events.map((e) => (
+              list.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="font-medium">{e.title}</TableCell>
                   <TableCell>{new Date(e.date).toLocaleDateString("ru-RU")}</TableCell>

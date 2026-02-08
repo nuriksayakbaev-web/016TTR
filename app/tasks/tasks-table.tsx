@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Task } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,9 @@ const COLS: ExcelColumn[] = [
 
 export function TasksTable({ tasks }: { tasks: Task[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const [list, setList] = useState<Task[]>(tasks);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState({
@@ -62,6 +64,13 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
+
+  useEffect(() => setList(tasks), [tasks]);
+
+  function refresh() {
+    router.refresh();
+    router.replace(pathname);
+  }
 
   function openCreate() {
     setFormError(null);
@@ -114,17 +123,20 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
         return;
       }
       toast.success("Задача обновлена");
+      setOpen(false);
+      refresh();
     } else {
-      const { error } = await insertRow(supabase, "tasks", payload);
+      const { data: inserted, error } = await insertRow(supabase, "tasks", payload);
       if (error) {
         setFormError(error.message);
         toast.error(error.message);
         return;
       }
+      setOpen(false);
+      const row = (inserted ?? null) as Task | null;
+      if (row) setList((prev) => [row, ...prev]);
       toast.success("Задача добавлена");
     }
-    setOpen(false);
-    router.refresh();
   }
 
   async function toggleUrgent(t: Task) {
@@ -135,7 +147,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       return;
     }
     toast.success(t.is_urgent ? "Снято со срочных" : "Отмечено как срочная");
-    router.refresh();
+    setList((prev) => prev.map((x) => (x.id === t.id ? { ...x, is_urgent: !x.is_urgent } : x)));
   }
 
   async function handleDelete(id: string) {
@@ -147,11 +159,11 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       return;
     }
     toast.success("Задача удалена");
-    router.refresh();
+    setList((prev) => prev.filter((t) => t.id !== id));
   }
 
   function handleExport() {
-    const rows = tasks.map((t) => ({
+    const rows = list.map((t) => ({
       ...t,
       status: statusLabel[t.status] ?? t.status,
       priority: priorityLabel[t.priority] ?? t.priority,
@@ -170,7 +182,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       )}
       <div className="flex gap-2">
         <Button onClick={openCreate} disabled={!supabase}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
-        <Button variant="outline" size="sm" onClick={handleExport} disabled={!tasks.length}>
+        <Button variant="outline" size="sm" onClick={handleExport} disabled={list.length === 0}>
           <FileDown className="mr-2 h-4 w-4" /> Excel
         </Button>
       </div>
@@ -187,14 +199,14 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="p-0">
                   <EmptyState icon={ListTodo} title="Нет задач" action={<Button onClick={openCreate}>Добавить</Button>} />
                 </TableCell>
               </TableRow>
             ) : (
-              tasks.map((t) => (
+              list.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleUrgent(t)} title={t.is_urgent ? "Убрать из срочных" : "Срочная"}>

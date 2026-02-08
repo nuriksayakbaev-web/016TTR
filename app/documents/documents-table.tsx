@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Document } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,12 +29,21 @@ import { Pencil, Trash2, Plus, FileText } from "lucide-react";
 
 export function DocumentsTable({ documents }: { documents: Document[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const [list, setList] = useState<Document[]>(documents);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Document | null>(null);
   const [form, setForm] = useState({ title: "", type: "", related_to: "", file_url: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
+
+  useEffect(() => setList(documents), [documents]);
+
+  function refresh() {
+    router.refresh();
+    router.replace(pathname);
+  }
 
   function openCreate() {
     setFormError(null);
@@ -76,17 +85,20 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
         return;
       }
       toast.success("Документ обновлён");
+      setOpen(false);
+      refresh();
     } else {
-      const { error } = await insertRow(supabase, "documents", payload);
+      const { data: inserted, error } = await insertRow(supabase, "documents", payload);
       if (error) {
         setFormError(error.message);
         toast.error(error.message);
         return;
       }
+      setOpen(false);
+      const row = (inserted ?? null) as Document | null;
+      if (row) setList((prev) => [row, ...prev]);
       toast.success("Документ добавлен");
     }
-    setOpen(false);
-    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -98,7 +110,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
       return;
     }
     toast.success("Документ удалён");
-    router.refresh();
+    setList((prev) => prev.filter((d) => d.id !== id));
   }
 
   return (
@@ -124,7 +136,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {documents.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="p-0">
                   <EmptyState
@@ -135,7 +147,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
                 </TableCell>
               </TableRow>
             ) : (
-              documents.map((d) => (
+              list.map((d) => (
                 <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.title}</TableCell>
                   <TableCell>{d.type}</TableCell>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Salary } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,43 +30,61 @@ import { downloadExcel, type ExcelColumn } from "@/lib/excel";
 import { Pencil, Trash2, Plus, FileDown, Banknote } from "lucide-react";
 
 const COLS: ExcelColumn[] = [
+  { key: "fio", label: "ФИО" },
   { key: "month", label: "Месяц" },
-  { key: "base", label: "База" },
-  { key: "bonus", label: "Бонус" },
-  { key: "penalty", label: "Штраф" },
-  { key: "total", label: "Итого" },
-  { key: "paid", label: "Оплачено" },
+  { key: "total", label: "Сумма" },
+  { key: "paid", label: "Статус" },
+];
+
+const MONTHS = [
+  "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12",
 ];
 
 export function SalariesTable({ salaries }: { salaries: Salary[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const [list, setList] = useState<Salary[]>(salaries);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Salary | null>(null);
   const [form, setForm] = useState({
+    fio: "",
     month: "",
-    base: 0,
-    bonus: 0,
-    penalty: 0,
+    year: new Date().getFullYear().toString(),
     total: 0,
     paid: false,
   });
   const supabase = createClient();
 
+  useEffect(() => {
+    setList(salaries);
+  }, [salaries]);
+
+  function refresh() {
+    router.refresh();
+    router.replace(pathname);
+  }
+
   function openCreate() {
     setEditing(null);
-    setForm({ month: "", base: 0, bonus: 0, penalty: 0, total: 0, paid: false });
+    setForm({
+      fio: "",
+      month: String(new Date().getMonth() + 1).padStart(2, "0"),
+      year: new Date().getFullYear().toString(),
+      total: 0,
+      paid: false,
+    });
     setOpen(true);
   }
 
   function openEdit(s: Salary) {
     setEditing(s);
+    const [y, m] = (s.month || "").split("-");
     setForm({
-      month: s.month,
-      base: s.base,
-      bonus: s.bonus,
-      penalty: s.penalty,
-      total: s.total,
+      fio: s.fio ?? "",
+      month: m || String(new Date().getMonth() + 1).padStart(2, "0"),
+      year: y || new Date().getFullYear().toString(),
+      total: Number(s.total),
       paid: s.paid,
     });
     setOpen(true);
@@ -78,13 +96,15 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       toast.error("Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.");
       return;
     }
-    const total = Number(form.base) + Number(form.bonus) - Number(form.penalty);
+    const monthStr = `${form.year}-${form.month}`;
+    const amount = Number(form.total);
     const payload = {
-      month: form.month,
-      base: Number(form.base),
-      bonus: Number(form.bonus),
-      penalty: Number(form.penalty),
-      total: form.total || total,
+      fio: form.fio || null,
+      month: monthStr,
+      base: amount,
+      bonus: 0,
+      penalty: 0,
+      total: amount,
       paid: form.paid,
     };
     if (editing) {
@@ -94,16 +114,19 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
         return;
       }
       toast.success("Запись обновлена");
+      setOpen(false);
+      refresh();
     } else {
-      const { error } = await insertRow(supabase, "salaries", payload);
+      const { data: inserted, error } = await insertRow(supabase, "salaries", payload);
       if (error) {
         toast.error(error.message);
         return;
       }
+      setOpen(false);
+      const row = (inserted ?? null) as Salary | null;
+      if (row) setList((prev) => [row, ...prev]);
       toast.success("Запись добавлена");
     }
-    setOpen(false);
-    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -115,11 +138,15 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       return;
     }
     toast.success("Запись удалена");
-    router.refresh();
+    setList((prev) => prev.filter((s) => s.id !== id));
   }
 
   function handleExport() {
-    const rows = salaries.map((s) => ({ ...s, paid: s.paid ? "Да" : "Нет" }));
+    const rows = list.map((s) => ({
+      ...s,
+      fio: s.fio ?? "—",
+      paid: s.paid ? "Оплачено" : "Не оплачено",
+    }));
     downloadExcel("Зарплаты", COLS, rows, "salaries");
     toast.success("Экспорт завершён");
   }
@@ -133,7 +160,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       )}
       <div className="flex gap-2">
         <Button onClick={openCreate} disabled={!supabase}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
-        <Button variant="outline" size="sm" onClick={handleExport} disabled={!salaries.length}>
+        <Button variant="outline" size="sm" onClick={handleExport} disabled={list.length === 0}>
           <FileDown className="mr-2 h-4 w-4" /> Excel
         </Button>
       </div>
@@ -141,31 +168,27 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>ФИО</TableHead>
               <TableHead>Месяц</TableHead>
-              <TableHead className="text-right">База</TableHead>
-              <TableHead className="text-right">Бонус</TableHead>
-              <TableHead className="text-right">Штраф</TableHead>
-              <TableHead className="text-right">Итого</TableHead>
-              <TableHead>Оплачено</TableHead>
+              <TableHead className="text-right">Сумма</TableHead>
+              <TableHead>Статус</TableHead>
               <TableHead className="w-[80px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {salaries.length === 0 ? (
+            {list.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
+                <TableCell colSpan={5} className="p-0">
                   <EmptyState icon={Banknote} title="Нет записей" action={<Button onClick={openCreate}>Добавить</Button>} />
                 </TableCell>
               </TableRow>
             ) : (
-              salaries.map((s) => (
+              list.map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.month}</TableCell>
-                  <TableCell className="text-right">{formatMoney(Number(s.base))}</TableCell>
-                  <TableCell className="text-right">{formatMoney(Number(s.bonus))}</TableCell>
-                  <TableCell className="text-right">{formatMoney(Number(s.penalty))}</TableCell>
+                  <TableCell className="font-medium">{s.fio ?? "—"}</TableCell>
+                  <TableCell>{s.month}</TableCell>
                   <TableCell className="text-right font-medium">{formatMoney(Number(s.total))}</TableCell>
-                  <TableCell>{s.paid ? "Да" : "Нет"}</TableCell>
+                  <TableCell>{s.paid ? "Оплачено" : "Не оплачено"}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
@@ -183,26 +206,48 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Месяц (напр. 2025-01)</Label>
-              <Input required value={form.month} onChange={(e) => setForm((f) => ({ ...f, month: e.target.value }))} />
+              <Label>ФИО</Label>
+              <Input
+                value={form.fio}
+                onChange={(e) => setForm((f) => ({ ...f, fio: e.target.value }))}
+                placeholder="Иванов Иван Иванович"
+              />
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>База</Label>
-                <Input type="number" step="0.01" value={form.base || ""} onChange={(e) => setForm((f) => ({ ...f, base: parseFloat(e.target.value) || 0 }))} />
+                <Label>Месяц</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={form.month}
+                  onChange={(e) => setForm((f) => ({ ...f, month: e.target.value }))}
+                >
+                  {MONTHS.map((m) => (
+                    <option key={m} value={m}>
+                      {new Date(2000, parseInt(m, 10) - 1).toLocaleString("ru-RU", { month: "long" })}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-2">
-                <Label>Бонус</Label>
-                <Input type="number" step="0.01" value={form.bonus || ""} onChange={(e) => setForm((f) => ({ ...f, bonus: parseFloat(e.target.value) || 0 }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Штраф</Label>
-                <Input type="number" step="0.01" value={form.penalty || ""} onChange={(e) => setForm((f) => ({ ...f, penalty: parseFloat(e.target.value) || 0 }))} />
+                <Label>Год</Label>
+                <Input
+                  type="number"
+                  min={2000}
+                  max={2100}
+                  value={form.year}
+                  onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
+                />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Итого</Label>
-              <Input type="number" step="0.01" value={form.total || ""} onChange={(e) => setForm((f) => ({ ...f, total: parseFloat(e.target.value) || 0 }))} />
+              <Label>Сумма</Label>
+              <Input
+                type="number"
+                step="0.01"
+                required
+                value={form.total || ""}
+                onChange={(e) => setForm((f) => ({ ...f, total: parseFloat(e.target.value) || 0 }))}
+              />
             </div>
             <div className="flex items-center gap-2">
               <input

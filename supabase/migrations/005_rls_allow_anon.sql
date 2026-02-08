@@ -1,5 +1,10 @@
 -- Allow anon to read/write all tables (single-user app, no auth).
 -- If "Add" does nothing or inserts fail: Supabase → SQL Editor → run this file.
+--
+-- Supabase Linter: "RLS Policy Always True" (WARN) — intentional.
+-- USING (true) / WITH CHECK (true) bypass RLS for anon; we accept this for
+-- a single-user app without auth. When adding real auth, replace with
+-- user-scoped policies (e.g. USING (auth.uid() = user_id)).
 
 DO $$
 DECLARE
