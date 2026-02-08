@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Invoice } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,7 @@ export function InvoicesTable({
 }: InvoicesTableProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [open, setOpen] = useState(false);
@@ -84,17 +85,44 @@ export function InvoicesTable({
     setList(invoices);
   }, [invoices]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const pageNum = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+    const from = (pageNum - 1) * pageSize;
+    const to = from + pageSize - 1;
+    let q = supabase
+      .from("invoices")
+      .select("*", { count: "exact" })
+      .order("due_date", { ascending: false })
+      .range(from, to);
+    const status = searchParams.get("status");
+    if (status && status !== "all") q = q.eq("status", status);
+    if (searchParams.get("filter") === "unpaid") q = q.in("status", ["draft", "sent", "overdue"]);
+    const fromDate = searchParams.get("from");
+    const toDate = searchParams.get("to");
+    if (fromDate) q = q.gte("due_date", fromDate);
+    if (toDate) q = q.lte("due_date", toDate);
+    const { data, error } = await q;
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as Invoice[]);
   }
+
+  // При возврате на страницу подгружаем свежий список из Supabase (обход кэша Next.js)
+  useEffect(() => {
+    if (pathname !== "/finances/invoices") return;
+    void fetchList();
+  }, [pathname, supabase, searchParams.toString(), pageSize]);
 
   function handleSaveSuccess(newInvoice?: Invoice | null) {
     if (newInvoice) {
       setList((prev) => [newInvoice, ...prev]);
       toast.success("Счёт создан");
+      void fetchList();
     } else {
-      refresh();
+      void fetchList();
       toast.success("Счёт обновлён");
     }
   }
@@ -108,7 +136,7 @@ export function InvoicesTable({
       return;
     }
     toast.success("Счёт удалён");
-    refresh();
+    await fetchList();
   }
 
   async function handleStatusChange(id: string, status: Invoice["status"]) {
@@ -121,7 +149,7 @@ export function InvoicesTable({
       return;
     }
     toast.success("Статус обновлён");
-    refresh();
+    await fetchList();
   }
 
   function handleExportCurrent() {

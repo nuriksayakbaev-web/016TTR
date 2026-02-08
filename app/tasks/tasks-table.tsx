@@ -67,10 +67,23 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
 
   useEffect(() => setList(tasks), [tasks]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .order("deadline", { ascending: true, nullsFirst: false });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as Task[]);
   }
+
+  useEffect(() => {
+    if (pathname !== "/tasks") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setFormError(null);
@@ -124,7 +137,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       }
       toast.success("Задача обновлена");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "tasks", payload);
       if (error) {
@@ -136,6 +149,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       const row = (inserted ?? null) as Task | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Задача добавлена");
+      await fetchList();
     }
   }
 
@@ -147,7 +161,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       return;
     }
     toast.success(t.is_urgent ? "Снято со срочных" : "Отмечено как срочная");
-    setList((prev) => prev.map((x) => (x.id === t.id ? { ...x, is_urgent: !x.is_urgent } : x)));
+    await fetchList();
   }
 
   async function handleDelete(id: string) {
@@ -159,7 +173,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       return;
     }
     toast.success("Задача удалена");
-    setList((prev) => prev.filter((t) => t.id !== id));
+    await fetchList();
   }
 
   function handleExport() {

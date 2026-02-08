@@ -39,11 +39,24 @@ export function NotesTable({ notes }: { notes: Note[] }) {
   const supabase = createClient();
 
   useEffect(() => setList(notes), [notes]);
-
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as Note[]);
   }
+
+  // При возврате на страницу подгружаем свежий список из Supabase (обход кэша Next.js)
+  useEffect(() => {
+    if (pathname !== "/notes") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setFormError(null);
@@ -76,7 +89,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
       }
       toast.success("Заметка обновлена");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "notes", payload);
       if (error) {
@@ -88,6 +101,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
       const row = (inserted ?? null) as Note | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Заметка добавлена");
+      await fetchList();
     }
   }
 
@@ -100,7 +114,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
       return;
     }
     toast.success("Заметка удалена");
-    setList((prev) => prev.filter((n) => n.id !== id));
+    await fetchList();
   }
 
   return (

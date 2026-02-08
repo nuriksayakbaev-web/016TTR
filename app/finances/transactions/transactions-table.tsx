@@ -62,10 +62,23 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
 
   useEffect(() => setList(transactions), [transactions]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .order("date", { ascending: false });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as Transaction[]);
   }
+
+  useEffect(() => {
+    if (pathname !== "/finances/transactions") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setEditing(null);
@@ -112,7 +125,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
       }
       toast.success("Транзакция обновлена");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "transactions", payload);
       if (error) {
@@ -123,6 +136,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
       const row = (inserted ?? null) as Transaction | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Транзакция добавлена");
+      await fetchList();
     }
   }
 
@@ -135,7 +149,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
       return;
     }
     toast.success("Транзакция удалена");
-    setList((prev) => prev.filter((t) => t.id !== id));
+    await fetchList();
   }
 
   function handleExport() {

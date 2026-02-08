@@ -58,10 +58,23 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
 
   useEffect(() => setList(events), [events]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .order("date", { ascending: true });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as CalendarEvent[]);
   }
+
+  useEffect(() => {
+    if (pathname !== "/calendar") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setEditing(null);
@@ -105,7 +118,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
       }
       toast.success("Событие обновлено");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "calendar_events", payload);
       if (error) {
@@ -116,6 +129,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
       const row = (inserted ?? null) as CalendarEvent | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Событие добавлено");
+      await fetchList();
     }
   }
 
@@ -128,7 +142,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
       return;
     }
     toast.success("Событие удалено");
-    setList((prev) => prev.filter((e) => e.id !== id));
+    await fetchList();
   }
 
   return (

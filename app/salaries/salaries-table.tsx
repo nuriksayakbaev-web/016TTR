@@ -60,10 +60,23 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
     setList(salaries);
   }, [salaries]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("salaries")
+      .select("*")
+      .order("month", { ascending: false });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as Salary[]);
   }
+
+  useEffect(() => {
+    if (pathname !== "/salaries") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setEditing(null);
@@ -115,7 +128,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       }
       toast.success("Запись обновлена");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "salaries", payload);
       if (error) {
@@ -126,6 +139,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       const row = (inserted ?? null) as Salary | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Запись добавлена");
+      await fetchList();
     }
   }
 
@@ -138,7 +152,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       return;
     }
     toast.success("Запись удалена");
-    setList((prev) => prev.filter((s) => s.id !== id));
+    await fetchList();
   }
 
   function handleExport() {

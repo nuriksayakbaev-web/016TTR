@@ -40,10 +40,23 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
 
   useEffect(() => setList(documents), [documents]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("documents")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as Document[]);
   }
+
+  useEffect(() => {
+    if (pathname !== "/documents") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setFormError(null);
@@ -86,7 +99,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
       }
       toast.success("Документ обновлён");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "documents", payload);
       if (error) {
@@ -98,6 +111,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
       const row = (inserted ?? null) as Document | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Документ добавлен");
+      await fetchList();
     }
   }
 
@@ -110,7 +124,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
       return;
     }
     toast.success("Документ удалён");
-    setList((prev) => prev.filter((d) => d.id !== id));
+    await fetchList();
   }
 
   return (

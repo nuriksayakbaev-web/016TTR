@@ -58,10 +58,22 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
 
   useEffect(() => setList(templates), [templates]);
 
-  function refresh() {
-    router.refresh();
-    router.replace(pathname);
+  async function fetchList() {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from("invoice_templates")
+      .select("*");
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((data ?? []) as InvoiceTemplate[]);
   }
+
+  useEffect(() => {
+    if (pathname !== "/finances/invoices/templates") return;
+    void fetchList();
+  }, [pathname, supabase]);
 
   function openCreate() {
     setEditing(null);
@@ -105,7 +117,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
       }
       toast.success("Шаблон обновлён");
       setOpen(false);
-      refresh();
+      await fetchList();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "invoice_templates", payload);
       if (error) {
@@ -116,6 +128,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
       const row = (inserted ?? null) as InvoiceTemplate | null;
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Шаблон создан");
+      await fetchList();
     }
   }
 
@@ -128,7 +141,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
       return;
     }
     toast.success("Шаблон удалён");
-    setList((prev) => prev.filter((t) => t.id !== id));
+    await fetchList();
   }
 
   return (
