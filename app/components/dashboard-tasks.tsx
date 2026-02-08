@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { ListTodo, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,57 @@ interface DashboardTasksProps {
 }
 
 export function DashboardTasks({ urgentTasks, upcomingTasks }: DashboardTasksProps) {
-  const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
   const supabase = createClient();
+  const [localUrgent, setLocalUrgent] = useState<Task[]>(urgentTasks);
+  const [localUpcoming, setLocalUpcoming] = useState<Task[]>(upcomingTasks);
+
+  useEffect(() => {
+    setLocalUrgent(urgentTasks);
+    setLocalUpcoming(upcomingTasks);
+  }, [urgentTasks, upcomingTasks]);
+
+  async function fetchTasks() {
+    if (!supabase) return;
+    const [urgentRes, upcomingRes] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, title, deadline, status, is_urgent")
+        .in("status", ["todo", "in_progress"])
+        .eq("is_urgent", true)
+        .order("deadline", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("tasks")
+        .select("id, title, deadline, status, is_urgent")
+        .in("status", ["todo", "in_progress"])
+        .order("deadline", { ascending: true, nullsFirst: false })
+        .limit(5),
+    ]);
+    if (urgentRes.error || upcomingRes.error) {
+      toast.error(
+        urgentRes.error?.message ||
+          upcomingRes.error?.message ||
+          "Ошибка загрузки задач"
+      );
+      return;
+    }
+    const urgent = (urgentRes.data ?? []).map((r) => ({
+      ...r,
+      is_urgent: Boolean(r.is_urgent),
+    })) as Task[];
+    const upcoming = (upcomingRes.data ?? []).map((r) => ({
+      ...r,
+      is_urgent: Boolean(r.is_urgent),
+    })) as Task[];
+    setLocalUrgent(urgent);
+    setLocalUpcoming(upcoming);
+  }
+
+  useEffect(() => {
+    if (pathname !== "/") return;
+    void fetchTasks();
+  }, [pathname, supabase]);
 
   async function toggleUrgent(task: Task) {
     if (!supabase) return;
@@ -29,7 +78,7 @@ export function DashboardTasks({ urgentTasks, upcomingTasks }: DashboardTasksPro
       return;
     }
     toast.success(task.is_urgent ? "Снято со срочных" : "Отмечено как срочная");
-    router.refresh();
+    await fetchTasks();
   }
 
   function TaskRow({
@@ -73,13 +122,13 @@ export function DashboardTasks({ urgentTasks, upcomingTasks }: DashboardTasksPro
 
   return (
     <>
-      {urgentTasks.length > 0 && (
+      {localUrgent.length > 0 && (
         <div className="rounded-card border border-amber-200/80 bg-amber-50/50 shadow-card overflow-hidden dark:border-amber-900/40 dark:bg-amber-950/20">
           <div className="border-b border-amber-200/80 bg-amber-100/50 px-5 py-3 font-medium text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/30 dark:text-amber-100">
             Срочные задачи
           </div>
           <div className="divide-y divide-amber-200/60 dark:divide-amber-900/30">
-            {urgentTasks.map((t) => (
+            {localUrgent.map((t) => (
               <TaskRow key={t.id} t={t} showUrgentToggle />
             ))}
           </div>
@@ -97,12 +146,12 @@ export function DashboardTasks({ urgentTasks, upcomingTasks }: DashboardTasksPro
           Ближайшие задачи
         </div>
         <div className="divide-y divide-border/60">
-          {upcomingTasks.length === 0 ? (
+          {localUpcoming.length === 0 ? (
             <div className="px-5 py-8 text-center text-sm text-muted-foreground">
               Нет активных задач
             </div>
           ) : (
-            upcomingTasks.map((t) => (
+            localUpcoming.map((t) => (
               <TaskRow key={t.id} t={t} showUrgentToggle />
             ))
           )}
