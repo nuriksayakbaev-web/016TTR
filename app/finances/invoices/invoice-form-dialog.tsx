@@ -54,10 +54,12 @@ export function InvoiceFormDialog({
 }) {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
   const toast = useToast();
 
   useEffect(() => {
+    setFormError(null);
     if (invoice) {
       setForm({
         invoice_number: invoice.invoice_number,
@@ -79,9 +81,11 @@ export function InvoiceFormDialog({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     if (!supabase) {
-      toast.error("Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.");
-      setSaving(false);
+      const msg = "Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.";
+      setFormError(msg);
+      toast.error(msg);
       return;
     }
     setSaving(true);
@@ -94,24 +98,33 @@ export function InvoiceFormDialog({
       status: form.status,
       comment: form.comment || null,
     };
-    if (invoice?.id) {
-      const { error } = await updateRow(supabase, "invoices", invoice.id, payload);
-      if (error) {
-        toast.error(error.message);
-        setSaving(false);
-        return;
+    try {
+      if (invoice?.id) {
+        const { error } = await updateRow(supabase, "invoices", invoice.id, payload);
+        if (error) {
+          setFormError(error.message);
+          toast.error(error.message);
+          setSaving(false);
+          return;
+        }
+      } else {
+        const { error } = await insertRow(supabase, "invoices", payload);
+        if (error) {
+          setFormError(error.message);
+          toast.error(error.message);
+          setSaving(false);
+          return;
+        }
       }
-    } else {
-      const { error } = await insertRow(supabase, "invoices", payload);
-      if (error) {
-        toast.error(error.message);
-        setSaving(false);
-        return;
-      }
+      setSaving(false);
+      onOpenChange(false);
+      onSuccess();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setFormError(msg);
+      toast.error(msg);
+      setSaving(false);
     }
-    setSaving(false);
-    onOpenChange(false);
-    onSuccess();
   }
 
   return (
@@ -121,6 +134,11 @@ export function InvoiceFormDialog({
           <DialogTitle>{invoice ? "Редактировать счёт" : "Новый счёт"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
+          {formError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Номер счёта</Label>
