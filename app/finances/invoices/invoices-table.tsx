@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Invoice } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ export function InvoicesTable({
   totalPages,
 }: InvoicesTableProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [open, setOpen] = useState(false);
@@ -80,6 +81,7 @@ export function InvoicesTable({
 
   function refresh() {
     router.refresh();
+    router.replace(pathname);
   }
 
   async function handleDelete(id: string) {
