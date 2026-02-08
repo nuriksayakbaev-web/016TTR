@@ -102,17 +102,21 @@ export function InvoiceFormDialog({
       if (invoice?.id) {
         const { error } = await updateRow(supabase, "invoices", invoice.id, payload);
         if (error) {
-          setFormError(error.message);
-          toast.error(error.message);
+          const msg = error.message;
+          setFormError(msg);
+          toast.error(msg);
           setSaving(false);
+          console.error("[016TTR] Invoice save error:", msg);
           return;
         }
       } else {
         const { error } = await insertRow(supabase, "invoices", payload);
         if (error) {
-          setFormError(error.message);
-          toast.error(error.message);
+          const msg = error.message;
+          setFormError(msg);
+          toast.error(msg);
           setSaving(false);
+          console.error("[016TTR] Invoice save error:", msg);
           return;
         }
       }
@@ -124,21 +128,25 @@ export function InvoiceFormDialog({
       setFormError(msg);
       toast.error(msg);
       setSaving(false);
+      console.error("[016TTR] Invoice save exception:", err);
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>{invoice ? "Редактировать счёт" : "Новый счёт"}</DialogTitle>
         </DialogHeader>
+        {formError && (
+          <div
+            role="alert"
+            className="rounded-lg border-2 border-red-500 bg-red-600 px-4 py-3 text-sm font-medium text-white"
+          >
+            Ошибка сохранения: {formError}
+          </div>
+        )}
         <form onSubmit={submit} className="space-y-4">
-          {formError && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {formError}
-            </div>
-          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Номер счёта</Label>
