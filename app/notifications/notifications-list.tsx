@@ -16,11 +16,13 @@ export function NotificationsList({
   const supabase = createClient();
 
   async function markRead(id: string) {
+    if (!supabase) return;
     await supabase.from("notifications").update({ read: true }).eq("id", id);
     router.refresh();
   }
 
   async function markAllRead() {
+    if (!supabase) return;
     const unread = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unread.length) {
       await supabase.from("notifications").update({ read: true }).in("id", unread);

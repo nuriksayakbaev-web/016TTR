@@ -9,8 +9,8 @@ function getGreeting(): string {
 
 export function PageHeader({ title }: { title?: string }) {
   return (
-    <header className="mb-6 flex items-center justify-between border-b border-border/60 bg-card/50 pb-4 pt-1">
-      <div>
+    <header className="mb-6 flex items-center justify-between border-b border-border/60 bg-card/50 px-4 pb-4 pt-1">
+      <div className="min-w-0">
         <p className="text-sm font-medium text-muted-foreground">
           {getGreeting()}!
         </p>

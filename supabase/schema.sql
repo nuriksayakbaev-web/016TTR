@@ -114,3 +114,6 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 CREATE INDEX IF NOT EXISTS idx_notifications_type_related ON notifications(type, related_id);
+
+-- RLS: if inserts/updates/deletes fail in app, run in Supabase SQL Editor:
+-- (copy from supabase/migrations/005_rls_allow_anon.sql)

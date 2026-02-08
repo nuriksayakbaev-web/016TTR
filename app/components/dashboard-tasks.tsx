@@ -20,6 +20,7 @@ export function DashboardTasks({ urgentTasks, upcomingTasks }: DashboardTasksPro
   const supabase = createClient();
 
   async function toggleUrgent(task: Task) {
+    if (!supabase) return;
     const { error } = await updateRow(supabase, "tasks", task.id, {
       is_urgent: !task.is_urgent,
     });

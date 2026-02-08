@@ -2,12 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { syncNotifications } from "@/lib/automations";
 import { NotificationsList } from "./notifications-list";
 import { PageHeader } from "@/components/page-header";
+import { EnvRequired } from "@/components/env-required";
 import type { Notification } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
   const supabase = createClient();
+  if (!supabase) return <EnvRequired />;
   await syncNotifications(supabase);
 
   const { data } = await supabase

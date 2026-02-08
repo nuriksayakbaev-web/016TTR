@@ -78,6 +78,10 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.");
+      return;
+    }
     const payload = {
       client_name: form.client_name,
       amount: Number(form.amount),
@@ -105,6 +109,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить шаблон? Автогенерация по нему прекратится.")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "invoice_templates", id);
     if (error) {
       toast.error(error.message);

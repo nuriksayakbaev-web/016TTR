@@ -33,15 +33,18 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Document | null>(null);
   const [form, setForm] = useState({ title: "", type: "", related_to: "", file_url: "" });
+  const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
 
   function openCreate() {
+    setFormError(null);
     setEditing(null);
     setForm({ title: "", type: "", related_to: "", file_url: "" });
     setOpen(true);
   }
 
   function openEdit(d: Document) {
+    setFormError(null);
     setEditing(d);
     setForm({
       title: d.title,
@@ -54,6 +57,11 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
+    if (!supabase) {
+      setFormError("Не заданы переменные Supabase. Проверьте Vercel → Environment Variables.");
+      return;
+    }
     const payload = {
       title: form.title,
       type: form.type || "other",
@@ -63,6 +71,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
     if (editing) {
       const { error } = await updateRow(supabase, "documents", editing.id, payload);
       if (error) {
+        setFormError(error.message);
         toast.error(error.message);
         return;
       }
@@ -70,6 +79,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
     } else {
       const { error } = await insertRow(supabase, "documents", payload);
       if (error) {
+        setFormError(error.message);
         toast.error(error.message);
         return;
       }
@@ -81,6 +91,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить документ?")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "documents", id);
     if (error) {
       toast.error(error.message);
@@ -92,7 +103,12 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
 
   return (
     <div className="space-y-2">
-      <Button onClick={openCreate}>
+      {!supabase && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+          Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.
+        </div>
+      )}
+      <Button onClick={openCreate} disabled={!supabase}>
         <Plus className="mr-2 h-4 w-4" />
         Добавить
       </Button>
@@ -147,6 +163,11 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
             <DialogTitle>{editing ? "Редактировать" : "Новый документ"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
+            {formError && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {formError}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Название</Label>
               <Input

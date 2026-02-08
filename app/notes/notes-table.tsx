@@ -33,15 +33,18 @@ export function NotesTable({ notes }: { notes: Note[] }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Note | null>(null);
   const [form, setForm] = useState({ content: "" });
+  const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
 
   function openCreate() {
+    setFormError(null);
     setEditing(null);
     setForm({ content: "" });
     setOpen(true);
   }
 
   function openEdit(n: Note) {
+    setFormError(null);
     setEditing(n);
     setForm({ content: n.content });
     setOpen(true);
@@ -49,10 +52,16 @@ export function NotesTable({ notes }: { notes: Note[] }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
+    if (!supabase) {
+      setFormError("Не заданы переменные Supabase (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY). Проверьте настройки в Vercel.");
+      return;
+    }
     const payload = { content: form.content };
     if (editing) {
       const { error } = await updateRow(supabase, "notes", editing.id, payload);
       if (error) {
+        setFormError(error.message);
         toast.error(error.message);
         return;
       }
@@ -60,6 +69,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
     } else {
       const { error } = await insertRow(supabase, "notes", payload);
       if (error) {
+        setFormError(error.message);
         toast.error(error.message);
         return;
       }
@@ -71,6 +81,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить заметку?")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "notes", id);
     if (error) {
       toast.error(error.message);
@@ -82,7 +93,12 @@ export function NotesTable({ notes }: { notes: Note[] }) {
 
   return (
     <div className="space-y-2">
-      <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
+      {!supabase && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+          Не заданы переменные Supabase. Добавьте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в Vercel → Environment Variables и сделайте Redeploy.
+        </div>
+      )}
+      <Button onClick={openCreate} disabled={!supabase}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
       <div className="rounded-card border border-border/80 bg-card shadow-card overflow-hidden">
         <Table>
           <TableHeader>
@@ -122,6 +138,11 @@ export function NotesTable({ notes }: { notes: Note[] }) {
             <DialogTitle>{editing ? "Редактировать заметку" : "Новая заметка"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
+            {formError && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {formError}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Содержание</Label>
               <Input required value={form.content} onChange={(e) => setForm({ content: e.target.value })} />

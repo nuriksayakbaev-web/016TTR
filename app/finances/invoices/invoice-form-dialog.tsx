@@ -79,6 +79,11 @@ export function InvoiceFormDialog({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.");
+      setSaving(false);
+      return;
+    }
     setSaving(true);
     const payload = {
       invoice_number: form.invoice_number,

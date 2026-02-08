@@ -74,6 +74,10 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.");
+      return;
+    }
     const total = Number(form.base) + Number(form.bonus) - Number(form.penalty);
     const payload = {
       month: form.month,
@@ -104,6 +108,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить запись?")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "salaries", id);
     if (error) {
       toast.error(error.message);
@@ -121,8 +126,13 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
 
   return (
     <div className="space-y-2">
+      {!supabase && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+          Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.
+        </div>
+      )}
       <div className="flex gap-2">
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
+        <Button onClick={openCreate} disabled={!supabase}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
         <Button variant="outline" size="sm" onClick={handleExport} disabled={!salaries.length}>
           <FileDown className="mr-2 h-4 w-4" /> Excel
         </Button>

@@ -60,9 +60,11 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
     deadline: "",
     is_urgent: false,
   });
+  const [formError, setFormError] = useState<string | null>(null);
   const supabase = createClient();
 
   function openCreate() {
+    setFormError(null);
     setEditing(null);
     setForm({
       title: "",
@@ -76,6 +78,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
   }
 
   function openEdit(t: Task) {
+    setFormError(null);
     setEditing(t);
     setForm({
       title: t.title,
@@ -90,6 +93,11 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
+    if (!supabase) {
+      setFormError("Не заданы переменные Supabase. Проверьте Vercel → Environment Variables и Redeploy.");
+      return;
+    }
     const payload = {
       title: form.title,
       description: form.description || null,
@@ -101,6 +109,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
     if (editing) {
       const { error } = await updateRow(supabase, "tasks", editing.id, payload);
       if (error) {
+        setFormError(error.message);
         toast.error(error.message);
         return;
       }
@@ -108,6 +117,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
     } else {
       const { error } = await insertRow(supabase, "tasks", payload);
       if (error) {
+        setFormError(error.message);
         toast.error(error.message);
         return;
       }
@@ -118,6 +128,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
   }
 
   async function toggleUrgent(t: Task) {
+    if (!supabase) return;
     const { error } = await updateRow(supabase, "tasks", t.id, { is_urgent: !t.is_urgent });
     if (error) {
       toast.error(error.message);
@@ -129,6 +140,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить задачу?")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "tasks", id);
     if (error) {
       toast.error(error.message);
@@ -151,8 +163,13 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
 
   return (
     <div className="space-y-2">
+      {!supabase && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+          Не заданы переменные Supabase. Добавьте в Vercel → Environment Variables и Redeploy.
+        </div>
+      )}
       <div className="flex gap-2">
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
+        <Button onClick={openCreate} disabled={!supabase}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
         <Button variant="outline" size="sm" onClick={handleExport} disabled={!tasks.length}>
           <FileDown className="mr-2 h-4 w-4" /> Excel
         </Button>
@@ -206,6 +223,11 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
             <DialogTitle>{editing ? "Редактировать задачу" : "Новая задача"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
+            {formError && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {formError}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Название</Label>
               <Input required value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />

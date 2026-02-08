@@ -3,6 +3,7 @@ import { runOverdueUpdate } from "@/lib/automations";
 import { InvoicesTable } from "./invoices-table";
 import { InvoiceFilters } from "./invoice-filters";
 import { PageHeader } from "@/components/page-header";
+import { EnvRequired } from "@/components/env-required";
 import type { Invoice } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,7 @@ export default async function InvoicesPage({
   const to = from + PAGE_SIZE - 1;
 
   const supabase = createClient();
+  if (!supabase) return <EnvRequired />;
   await runOverdueUpdate(supabase);
   let q = supabase
     .from("invoices")

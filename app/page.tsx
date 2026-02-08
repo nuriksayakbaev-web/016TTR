@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { formatMoney } from "@/lib/currency";
 import { PageHeader } from "@/components/page-header";
+import { EnvRequired } from "@/components/env-required";
 import { DashboardTasks } from "./components/dashboard-tasks";
 import type { Task } from "@/lib/types";
 
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = createClient();
+  if (!supabase) return <EnvRequired />;
 
   const [incomeRes, expenseRes, unpaidRes, urgentRes, upcomingRes] = await Promise.all([
     supabase.from("transactions").select("amount").eq("type", "income"),

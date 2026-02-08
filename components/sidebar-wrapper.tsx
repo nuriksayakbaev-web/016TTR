@@ -4,12 +4,9 @@ import { Sidebar } from "./sidebar";
 import type { Notification } from "@/lib/types";
 
 export async function SidebarWrapper() {
-  let supabase;
-  try {
-    supabase = createClient();
-  } catch {
-    return <Sidebar initialNotifications={[]} />;
-  }
+  const supabase = createClient();
+  if (!supabase) return <Sidebar initialNotifications={[]} />;
+
   await runInvoiceTemplates(supabase);
   await syncNotifications(supabase);
 

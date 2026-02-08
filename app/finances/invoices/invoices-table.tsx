@@ -84,6 +84,7 @@ export function InvoicesTable({
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить счёт? Это действие нельзя отменить.")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "invoices", id);
     if (error) {
       toast.error(error.message);
@@ -94,6 +95,7 @@ export function InvoicesTable({
   }
 
   async function handleStatusChange(id: string, status: Invoice["status"]) {
+    if (!supabase) return;
     setEditingStatusId(id);
     const { error } = await updateRow(supabase, "invoices", id, { status });
     setEditingStatusId(null);
@@ -115,6 +117,10 @@ export function InvoicesTable({
   }
 
   async function handleExportAll() {
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase.");
+      return;
+    }
     setExporting(true);
     const search = new URLSearchParams(window.location.search);
     try {

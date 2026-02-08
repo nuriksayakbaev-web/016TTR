@@ -56,6 +56,7 @@ export function Sidebar({
 
   async function markRead(id: string) {
     const supabase = createClient();
+    if (!supabase) return;
     await supabase.from("notifications").update({ read: true }).eq("id", id);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     setOpen(false);

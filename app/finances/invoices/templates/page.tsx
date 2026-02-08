@@ -1,12 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { TemplatesTable } from "./templates-table";
 import { PageHeader } from "@/components/page-header";
+import { EnvRequired } from "@/components/env-required";
 import type { InvoiceTemplate } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvoiceTemplatesPage() {
   const supabase = createClient();
+  if (!supabase) return <EnvRequired />;
   const { data } = await supabase
     .from("invoice_templates")
     .select("*")

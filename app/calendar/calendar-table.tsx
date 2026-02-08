@@ -78,6 +78,10 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
 
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.");
+      return;
+    }
     const payload = {
       title: form.title,
       date: form.date,
@@ -105,6 +109,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
 
   async function handleDelete(id: string) {
     if (!confirm("Удалить событие?")) return;
+    if (!supabase) return;
     const { error } = await deleteRow(supabase, "calendar_events", id);
     if (error) {
       toast.error(error.message);
@@ -116,7 +121,12 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
 
   return (
     <div className="space-y-2">
-      <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
+      {!supabase && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+          Не заданы переменные Supabase. Vercel → Environment Variables → Redeploy.
+        </div>
+      )}
+      <Button onClick={openCreate} disabled={!supabase}><Plus className="mr-2 h-4 w-4" /> Добавить</Button>
       <div className="rounded-card border border-border/80 bg-card shadow-card overflow-hidden">
         <Table>
           <TableHeader>
