@@ -129,6 +129,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       toast.success("Запись обновлена");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "salaries", payload);
       if (error) {
@@ -140,6 +141,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Запись добавлена");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -153,6 +155,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
     }
     toast.success("Запись удалена");
     await fetchList();
+    router.refresh();
   }
 
   function handleExport() {
@@ -227,7 +230,7 @@ export function SalariesTable({ salaries }: { salaries: Salary[] }) {
                 placeholder="Иванов Иван Иванович"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Месяц</Label>
                 <select

@@ -37,9 +37,9 @@ export function InvoiceFilters() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
       <Select value={status} onValueChange={(v) => setFilter("status", v)}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -53,14 +53,14 @@ export function InvoiceFilters() {
       <Input
         type="date"
         placeholder="От"
-        className="w-[140px]"
+        className="w-full sm:w-[140px]"
         value={from}
         onChange={(e) => setFilter("from", e.target.value)}
       />
       <Input
         type="date"
         placeholder="До"
-        className="w-[140px]"
+        className="w-full sm:w-[140px]"
         value={to}
         onChange={(e) => setFilter("to", e.target.value)}
       />

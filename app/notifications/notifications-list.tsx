@@ -6,6 +6,8 @@ import { Notification } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Receipt, ListTodo } from "lucide-react";
+import { updateRow } from "@/lib/supabaseService";
+import { useToast } from "@/lib/toast";
 
 export function NotificationsList({
   notifications,
@@ -13,11 +15,16 @@ export function NotificationsList({
   notifications: Notification[];
 }) {
   const router = useRouter();
+  const toast = useToast();
   const supabase = createClient();
 
   async function markRead(id: string) {
     if (!supabase) return;
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
+    const { error } = await updateRow(supabase, "notifications", id, { read: true });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     router.refresh();
   }
 
@@ -25,7 +32,14 @@ export function NotificationsList({
     if (!supabase) return;
     const unread = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unread.length) {
-      await supabase.from("notifications").update({ read: true }).in("id", unread);
+      const results = await Promise.all(
+        unread.map((id) => updateRow(supabase, "notifications", id, { read: true }))
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) {
+        toast.error(failed.error.message);
+        return;
+      }
       router.refresh();
     }
   }

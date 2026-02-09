@@ -138,6 +138,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       toast.success("Задача обновлена");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "tasks", payload);
       if (error) {
@@ -150,6 +151,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Задача добавлена");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -162,6 +164,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
     }
     toast.success(t.is_urgent ? "Снято со срочных" : "Отмечено как срочная");
     await fetchList();
+    router.refresh();
   }
 
   async function handleDelete(id: string) {
@@ -174,6 +177,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
     }
     toast.success("Задача удалена");
     await fetchList();
+    router.refresh();
   }
 
   function handleExport() {
@@ -262,7 +266,7 @@ export function TasksTable({ tasks }: { tasks: Task[] }) {
               <Label>Описание</Label>
               <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Статус</Label>
                 <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v as Task["status"] }))}>

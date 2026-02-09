@@ -100,6 +100,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
       toast.success("Документ обновлён");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "documents", payload);
       if (error) {
@@ -112,6 +113,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Документ добавлен");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -125,6 +127,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
     }
     toast.success("Документ удалён");
     await fetchList();
+    router.refresh();
   }
 
   return (

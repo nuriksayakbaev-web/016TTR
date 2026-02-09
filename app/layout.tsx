@@ -17,9 +17,11 @@ export default function RootLayout({
     <html lang="ru">
       <body className="min-h-screen">
         <Providers>
-          <div className="flex min-h-screen">
+          <div className="min-h-screen md:flex">
             <SidebarWrapper />
-            <main className="flex-1 overflow-auto bg-background p-6">{children}</main>
+            <main className="flex-1 overflow-auto bg-background px-3 py-4 sm:px-4 sm:py-5 md:p-6">
+              {children}
+            </main>
           </div>
         </Providers>
       </body>

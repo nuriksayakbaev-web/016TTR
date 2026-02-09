@@ -126,6 +126,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
       toast.success("Транзакция обновлена");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "transactions", payload);
       if (error) {
@@ -137,6 +138,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Транзакция добавлена");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -150,6 +152,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
     }
     toast.success("Транзакция удалена");
     await fetchList();
+    router.refresh();
   }
 
   function handleExport() {
@@ -227,7 +230,7 @@ export function TransactionsTable({ transactions }: { transactions: Transaction[
             <DialogTitle>{editing ? "Редактировать" : "Новая транзакция"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Тип</Label>
                 <Select

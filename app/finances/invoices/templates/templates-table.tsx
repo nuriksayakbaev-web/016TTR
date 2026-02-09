@@ -118,6 +118,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
       toast.success("Шаблон обновлён");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "invoice_templates", payload);
       if (error) {
@@ -129,6 +130,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Шаблон создан");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -142,6 +144,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
     }
     toast.success("Шаблон удалён");
     await fetchList();
+    router.refresh();
   }
 
   return (
@@ -245,7 +248,7 @@ export function TemplatesTable({ templates }: { templates: InvoiceTemplate[] }) 
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Период</Label>
                 <Select

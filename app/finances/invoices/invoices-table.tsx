@@ -118,12 +118,21 @@ export function InvoicesTable({
 
   function handleSaveSuccess(newInvoice?: Invoice | null) {
     if (newInvoice) {
-      setList((prev) => [newInvoice, ...prev]);
       toast.success("Счёт создан");
+      if (page > 1) {
+        const next = new URLSearchParams(searchParams.toString());
+        next.set("page", "1");
+        router.push(`/finances/invoices?${next.toString()}`);
+        router.refresh();
+        return;
+      }
+      setList((prev) => [newInvoice, ...prev]);
       void fetchList();
+      router.refresh();
     } else {
       void fetchList();
       toast.success("Счёт обновлён");
+      router.refresh();
     }
   }
 
@@ -137,6 +146,7 @@ export function InvoicesTable({
     }
     toast.success("Счёт удалён");
     await fetchList();
+    router.refresh();
   }
 
   async function handleStatusChange(id: string, status: Invoice["status"]) {
@@ -150,6 +160,7 @@ export function InvoicesTable({
     }
     toast.success("Статус обновлён");
     await fetchList();
+    router.refresh();
   }
 
   function handleExportCurrent() {

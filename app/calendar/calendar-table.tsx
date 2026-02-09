@@ -119,6 +119,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
       toast.success("Событие обновлено");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "calendar_events", payload);
       if (error) {
@@ -130,6 +131,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Событие добавлено");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -143,6 +145,7 @@ export function CalendarTable({ events }: { events: CalendarEvent[] }) {
     }
     toast.success("Событие удалено");
     await fetchList();
+    router.refresh();
   }
 
   return (

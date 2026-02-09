@@ -90,6 +90,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
       toast.success("Заметка обновлена");
       setOpen(false);
       await fetchList();
+      router.refresh();
     } else {
       const { data: inserted, error } = await insertRow(supabase, "notes", payload);
       if (error) {
@@ -102,6 +103,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
       if (row) setList((prev) => [row, ...prev]);
       toast.success("Заметка добавлена");
       await fetchList();
+      router.refresh();
     }
   }
 
@@ -115,6 +117,7 @@ export function NotesTable({ notes }: { notes: Note[] }) {
     }
     toast.success("Заметка удалена");
     await fetchList();
+    router.refresh();
   }
 
   return (
