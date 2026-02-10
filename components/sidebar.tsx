@@ -159,7 +159,7 @@ export function Sidebar({
               )}
             </button>
             {open && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-card border border-border/80 bg-card py-1 shadow-card-hover">
+              <div className="absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1rem))] rounded-card border border-border/80 bg-card py-1 shadow-card-hover">
                 <div className="border-b px-3 py-2 text-sm font-medium">
                   Уведомления
                 </div>
@@ -174,7 +174,7 @@ export function Sidebar({
                         key={n.id}
                         className="flex items-start justify-between gap-2 border-b border-transparent px-3 py-2 last:border-0 hover:bg-muted/50"
                       >
-                        <span className="text-sm">{n.message}</span>
+                        <span className="min-w-0 flex-1 text-sm break-words">{n.message}</span>
                         <button
                           type="button"
                           onClick={() => markRead(n.id)}
