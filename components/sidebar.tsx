@@ -137,7 +137,13 @@ export function Sidebar({
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
-        <span className="font-semibold text-foreground">016TTR</span>
+        <Link
+          href="/"
+          className="font-semibold text-foreground transition-colors hover:text-primary"
+          aria-label="Перейти на дашборд"
+        >
+          016TTR
+        </Link>
         <Link
           href="/notifications"
           className="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -168,7 +174,13 @@ export function Sidebar({
         )}
       >
         <div className="flex h-14 items-center justify-between border-b border-border/60 px-4 font-semibold text-foreground md:px-5">
-          016TTR
+          <Link
+            href="/"
+            className="transition-colors hover:text-primary"
+            aria-label="Перейти на дашборд"
+          >
+            016TTR
+          </Link>
           <div className="relative hidden md:block" ref={ref}>
             <button
               type="button"
