@@ -64,6 +64,19 @@ export function Sidebar({
     setOpen(false);
   }, [pathname]);
 
+  async function fetchNotifications() {
+    const supabase = createClient();
+    if (!supabase) return;
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("date", { ascending: false })
+      .limit(100);
+    if (data) {
+      setNotifications(data as Notification[]);
+    }
+  }
+
   async function markRead(id: string) {
     const supabase = createClient();
     if (!supabase) {
@@ -79,10 +92,14 @@ export function Sidebar({
         toast.error(error.message);
         return;
       }
+      // Оптимистичное обновление
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-      router.refresh();
+      // Перезагружаем свежие данные из БД
+      await fetchNotifications();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ошибка при обновлении уведомления");
+      // В случае ошибки перезагружаем данные для восстановления состояния
+      await fetchNotifications();
     }
   }
 

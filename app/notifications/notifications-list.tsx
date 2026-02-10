@@ -22,6 +22,19 @@ export function NotificationsList({
     setList(notifications);
   }, [notifications]);
 
+  async function fetchList() {
+    const supabase = createClient();
+    if (!supabase) return;
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("date", { ascending: false })
+      .limit(100);
+    if (data) {
+      setList(data as Notification[]);
+    }
+  }
+
   async function markRead(id: string) {
     const supabase = createClient();
     if (!supabase) {
@@ -37,10 +50,14 @@ export function NotificationsList({
         toast.error(error.message);
         return;
       }
+      // Оптимистичное обновление
       setList((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-      router.refresh();
+      // Перезагружаем свежие данные из БД
+      await fetchList();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ошибка при обновлении уведомления");
+      // В случае ошибки перезагружаем данные для восстановления состояния
+      await fetchList();
     }
   }
 
@@ -62,10 +79,14 @@ export function NotificationsList({
         toast.error(error.message);
         return;
       }
+      // Оптимистичное обновление
       setList((prev) => prev.map((n) => ({ ...n, read: true })));
-      router.refresh();
+      // Перезагружаем свежие данные из БД
+      await fetchList();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Ошибка при обновлении уведомлений");
+      // В случае ошибки перезагружаем данные для восстановления состояния
+      await fetchList();
     }
   }
 
