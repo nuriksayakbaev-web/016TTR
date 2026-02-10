@@ -70,17 +70,20 @@ export function Sidebar({
       toast.error("Не заданы переменные Supabase.");
       return;
     }
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ошибка при обновлении уведомления");
     }
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    setOpen(false);
-    router.refresh();
   }
 
   const unread = notifications.filter((n) => !n.read);

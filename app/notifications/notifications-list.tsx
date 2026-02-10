@@ -16,7 +16,6 @@ export function NotificationsList({
 }) {
   const router = useRouter();
   const toast = useToast();
-  const supabase = createClient();
   const [list, setList] = useState<Notification[]>(notifications);
 
   useEffect(() => {
@@ -24,23 +23,29 @@ export function NotificationsList({
   }, [notifications]);
 
   async function markRead(id: string) {
+    const supabase = createClient();
     if (!supabase) {
       toast.error("Не заданы переменные Supabase.");
       return;
     }
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      setList((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ошибка при обновлении уведомления");
     }
-    setList((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    router.refresh();
   }
 
   async function markAllRead() {
+    const supabase = createClient();
     if (!supabase) {
       toast.error("Не заданы переменные Supabase.");
       return;
@@ -48,16 +53,20 @@ export function NotificationsList({
     const unread = list.filter((n) => !n.read);
     if (unread.length === 0) return;
     const unreadIds = unread.map((n) => n.id);
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read: true })
-      .in("id", unreadIds);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .in("id", unreadIds);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      setList((prev) => prev.map((n) => ({ ...n, read: true })));
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Ошибка при обновлении уведомлений");
     }
-    setList((prev) => prev.map((n) => ({ ...n, read: true })));
-    router.refresh();
   }
 
   const unreadCount = list.filter((n) => !n.read).length;
