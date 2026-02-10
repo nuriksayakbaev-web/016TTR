@@ -138,8 +138,8 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/80 bg-card shadow-xl transition-transform md:static md:z-0 md:flex md:w-56 md:translate-x-0 md:shadow-sm",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 right-0 z-40 flex w-72 flex-col border-l border-border/80 bg-card shadow-xl transition-transform md:static md:z-0 md:flex md:w-56 md:translate-x-0 md:shadow-sm",
+          mobileOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
         <div className="flex h-14 items-center justify-between border-b border-border/60 px-4 font-semibold text-foreground md:px-5">
@@ -159,7 +159,7 @@ export function Sidebar({
               )}
             </button>
             {open && (
-              <div className="fixed right-3 top-16 z-50 w-[min(22rem,calc(100vw-1rem))] rounded-card border border-border/80 bg-card py-1 shadow-card-hover">
+              <div className="fixed left-2 right-2 top-16 z-50 rounded-card border border-border/80 bg-card py-1 shadow-card-hover md:left-auto md:right-3 md:w-[22rem]">
                 <div className="border-b px-3 py-2 text-sm font-medium">
                   Уведомления
                 </div>
