@@ -159,11 +159,11 @@ export function Sidebar({
               )}
             </button>
             {open && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1rem))] rounded-card border border-border/80 bg-card py-1 shadow-card-hover">
+              <div className="fixed right-3 top-16 z-50 w-[min(22rem,calc(100vw-1rem))] rounded-card border border-border/80 bg-card py-1 shadow-card-hover">
                 <div className="border-b px-3 py-2 text-sm font-medium">
                   Уведомления
                 </div>
-                <div className="max-h-64 overflow-auto">
+                <div className="max-h-[70vh] overflow-auto">
                   {unread.length === 0 ? (
                     <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                       Нет новых
