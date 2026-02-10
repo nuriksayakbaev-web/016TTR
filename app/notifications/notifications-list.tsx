@@ -1,12 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Notification } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Receipt, ListTodo } from "lucide-react";
-import { updateRow } from "@/lib/supabaseService";
 import { useToast } from "@/lib/toast";
 
 export function NotificationsList({
@@ -17,34 +17,50 @@ export function NotificationsList({
   const router = useRouter();
   const toast = useToast();
   const supabase = createClient();
+  const [list, setList] = useState<Notification[]>(notifications);
+
+  useEffect(() => {
+    setList(notifications);
+  }, [notifications]);
 
   async function markRead(id: string) {
-    if (!supabase) return;
-    const { error } = await updateRow(supabase, "notifications", id, { read: true });
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase.");
+      return;
+    }
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
     }
+    setList((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     router.refresh();
   }
 
   async function markAllRead() {
-    if (!supabase) return;
-    const unread = notifications.filter((n) => !n.read).map((n) => n.id);
-    if (unread.length) {
-      const results = await Promise.all(
-        unread.map((id) => updateRow(supabase, "notifications", id, { read: true }))
-      );
-      const failed = results.find((r) => r.error);
-      if (failed?.error) {
-        toast.error(failed.error.message);
-        return;
-      }
-      router.refresh();
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase.");
+      return;
     }
+    const unread = list.filter((n) => !n.read);
+    if (unread.length === 0) return;
+    const unreadIds = unread.map((n) => n.id);
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .in("id", unreadIds);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setList((prev) => prev.map((n) => ({ ...n, read: true })));
+    router.refresh();
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = list.filter((n) => !n.read).length;
 
   return (
     <div className="space-y-2">
@@ -55,12 +71,12 @@ export function NotificationsList({
       )}
       <div className="rounded-card border border-border/80 bg-card shadow-card overflow-hidden">
         <ul className="divide-y divide-border/60">
-          {notifications.length === 0 ? (
+          {list.length === 0 ? (
             <li className="px-4 py-8 text-center text-sm text-muted-foreground">
               Нет уведомлений
             </li>
           ) : (
-            notifications.map((n) => (
+            list.map((n) => (
               <li
                 key={n.id}
                 className={`flex items-center justify-between gap-4 px-4 py-3 ${

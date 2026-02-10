@@ -20,7 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
-import { updateRow } from "@/lib/supabaseService";
 import { useToast } from "@/lib/toast";
 
 const nav = [
@@ -67,8 +66,14 @@ export function Sidebar({
 
   async function markRead(id: string) {
     const supabase = createClient();
-    if (!supabase) return;
-    const { error } = await updateRow(supabase, "notifications", id, { read: true });
+    if (!supabase) {
+      toast.error("Не заданы переменные Supabase.");
+      return;
+    }
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", id);
     if (error) {
       toast.error(error.message);
       return;
